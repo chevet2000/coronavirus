@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>🦠 Coronavirus el Juego</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,'Segoe UI',sans-serif}
+[hidden]{display:none!important}
+body{background:#1b2430;color:#eee;min-height:100vh;padding:10px}
+h1{font-size:1.2rem;text-align:center;margin:6px 0}
+.screen{max-width:420px;margin:14px auto;background:#243247;padding:18px;border-radius:14px}
+.screen label{display:block;margin:10px 0 4px;font-size:.9rem}
+.screen input,.screen select{width:100%;padding:8px;border-radius:8px;border:0;margin-bottom:4px}
+button{background:#4caf50;color:#fff;border:0;padding:10px 16px;border-radius:10px;font-size:1rem;cursor:pointer;width:100%}
+button:disabled{opacity:.4}
+button.sec{background:#3b6ea5}button.warn{background:#78909c}
+#codigoSala{font-size:1.6rem;font-weight:800;letter-spacing:2px;text-align:center;background:#111a26;border-radius:10px;padding:10px;margin:8px 0}
+#listaSala{font-size:.9rem;background:#1a2536;border-radius:8px;padding:8px;margin:8px 0;min-height:40px}
+#listaSala .f{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.kick{background:#c62828!important;color:#fff!important;border:0;border-radius:8px;padding:2px 9px;font-size:.72rem;cursor:pointer;width:auto!important;margin-left:auto}
+#recon{position:fixed;top:0;left:0;right:0;background:#ff9800;color:#111;font-weight:700;padding:7px;text-align:center;z-index:60;font-size:.85rem}
+/* ============ ESCENA 3D ============ */
+#scene{position:relative;height:56vh;min-height:340px;border-radius:12px;overflow:hidden;margin-bottom:10px;
+ background:radial-gradient(ellipse at 50% 25%,#1d2c40 0%,#0d1620 75%);border:1px solid #ffffff14;
+ perspective:1100px;perspective-origin:50% 40%}
+#stage{position:absolute;left:50%;top:50%;will-change:transform}
+#board{display:grid;gap:3px;width:max-content;border-radius:8px;box-shadow:0 34px 70px #000c,0 6px 18px #0009}
+.cell{border-radius:7px;font-size:10px;display:flex;align-items:center;justify-content:center;position:relative;color:#263238;border:1px solid #0003}
+.cell .num{position:absolute;top:0;left:2px;font-size:7px;opacity:.55;color:#111}
+.void{border-radius:4px}
+.cell.q{background:#e53935!important;color:#fff;font-size:14px;border:2px solid #b71c1c;
+ box-shadow:0 0 0 2px #ffcdd2,0 0 10px #ff1744;animation:qpulse 1.5s infinite;z-index:1}
+@keyframes qpulse{0%,100%{box-shadow:0 0 0 2px #ffcdd2,0 0 6px #ff1744}
+ 50%{box-shadow:0 0 0 3px #fff,0 0 14px #ff5252}}
+.cell.b{background:#66bb6a!important;color:#0b3d0e;font-weight:800;font-size:10px;border:2px solid #1b5e20}
+.cell.r{background:#ef5350!important;color:#4d0404;font-weight:800;font-size:10px;border:2px solid #7f0000}
+.cell.s{background:#b2ebf2!important;font-size:12px;border-color:#00695c}
+.cell.c{background:#fff59d!important;font-size:12px;border-color:#f9a825}
+.cell.start{background:#a5d6a7!important;font-size:13px;border-color:#2e7d32}
+.cell.goal{background:#ff8a65!important;font-size:13px;border-color:#bf360c}
+.cell.glow{box-shadow:0 0 0 3px #ffeb3b,0 0 14px #ffeb3b!important;z-index:3}
+.tok{position:absolute;font-size:12px;top:0;filter:drop-shadow(0 2px 2px #000a);z-index:2}
+#panel{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:760px){#panel{grid-template-columns:1.4fr 1fr}}
+.box{background:#243247;border-radius:12px;padding:10px}
+.pl{display:flex;gap:6px;align-items:center;padding:4px 8px;border-radius:8px;margin-bottom:4px;font-size:.88rem;flex-wrap:wrap}
+.pl.active{background:#39557d}
+.pl.me{outline:2px solid #4caf50}
+.pl.kicked{opacity:.45;text-decoration:line-through}
+.chips{display:flex;flex-wrap:wrap;gap:4px;width:100%;margin-top:2px}
+.chip{background:#3b4d6b;padding:2px 8px;border-radius:20px;font-size:.72rem;cursor:help}
+#dice{display:flex;gap:10px;justify-content:center;margin:10px 0;min-height:52px}
+.die{width:50px;height:50px;background:#fff;color:#111;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;box-shadow:0 3px 6px #0006}
+#log{height:130px;overflow-y:auto;font-size:.78rem;line-height:1.5;background:#1a2536;border-radius:8px;padding:8px;margin-top:8px}
+#log div{border-bottom:1px solid #ffffff10;padding:2px 0}
+#modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.mcard{background:#fff;color:#222;border-radius:16px;max-width:360px;width:100%;padding:20px;text-align:center;animation:pop .18s}
+@keyframes pop{from{transform:scale(.85);opacity:0}}
+.mcard .big{font-size:3rem;margin:6px 0}
+.mcard h3{margin-bottom:6px}
+.mcard p{font-size:.95rem;margin-bottom:14px}
+.mcard button{margin-top:6px}
+.btnv{display:flex;flex-direction:column;gap:6px}
+details{font-size:.78rem;margin-top:12px;color:#aac;text-align:left}
+details p{margin:6px 0}
+.hint{font-size:.72rem;color:#8899aa;text-align:center;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div id="recon" hidden></div>
+<h1>🦠 CORONAVIRUS EL JUEGO</h1>
+
+<!-- ============ MENÚ PRINCIPAL ============ -->
+<div id="setup" class="screen">
+  <button onclick="verHotSeat()">📱 Jugar en un solo teléfono</button>
+  <button class="sec" style="margin-top:8px" onclick="verCrear()">🌐 Crear sala online</button>
+  <button class="sec" style="margin-top:8px" onclick="verUnir()">🔗 Unirse a una sala</button>
+  <button id="btnReconectar" class="warn" hidden style="margin-top:8px" onclick="reconectarGuardada()"></button>
+  <details>
+    <summary>📖 Reglas rápidas</summary>
+    <p>🎲 Tira 4 dados: 2 numéricos (avance) + 2 de figuras (🦠 te detiene, 😷/🧴 te salvan).</p>
+    <p>🦠 Con virus puedes SACRIFICAR 1 carta de protección y avanzar igual, o usar 🌡️ termómetro y repetir la tirada.</p>
+    <p>🏥 Cuarentena = checkpoint seguro. ➕ verdes avanzan (hasta +25⚡) · ➖ rojas retroceden (hasta −30⚡).</p>
+    <p>🛡️ celestes dan protección · ❓ amarillas dan premio/castigo. 🏁 Meta exacta o rebotas.</p>
+    <p>🎥 La cámara te acompaña: vista isométrica del tablero y primera persona cuando tu ficha recorre el camino.</p>
+  </details>
+</div>
+
+<!-- ============ HOT-SEAT ============ -->
+<div id="setupHot" class="screen" hidden>
+  <label>Jugadores (2-6)</label>
+  <select id="nPlayers" onchange="mkNames()">
+    <option>2</option><option>3</option><option selected>4</option>
+    <option>5</option><option>6</option>
+  </select>
+  <div id="names"></div>
+  <label>Regla de los dados con figuras</label>
+  <select id="diceMode">
+    <option value="fiel">Fiel: con 1 virus 🦠 pierdes el turno (~25% avanzar)</option>
+    <option value="suave">Suave: solo 2 virus te detienen (~75% avanzar)</option>
+    <option value="mate">Matemático: cada virus resta 2 casillas</option>
+  </select>
+  <button onclick="startHot()">▶ Empezar partida</button>
+  <button class="warn" style="margin-top:8px" onclick="volver()">← Volver</button>
+</div>
+
+<!-- ============ CREAR SALA ============ -->
+<div id="setupHost" class="screen" hidden>
+  <label>Tu nombre (eres el anfitrión)</label>
+  <input id="hostName" placeholder="Anfitrión"/>
+  <label>Regla de los dados con figuras</label>
+  <select id="diceModeH">
+    <option value="fiel">Fiel: 1 virus 🦠 pierdes turno</option>
+    <option value="suave">Suave: 2 virus detienen</option>
+    <option value="mate">Matemático: virus resta 2</option>
+  </select>
+  <div id="codigoSala">····</div>
+  <div style="text-align:center"><div id="qrBox" style="display:inline-block;background:#fff;padding:8px;border-radius:8px"></div></div>
+  <div class="hint" style="margin-top:6px">Comparte el código o el QR. Puedes expulsar con ❌.</div>
+  <div id="listaSala">Esperando jugadores...</div>
+  <button id="btnEmpezar" onclick="empezarRed()" disabled>▶ Empezar partida</button>
+  <button class="warn" style="margin-top:8px" onclick="location.reload()">← Cancelar</button>
+</div>
+
+<!-- ============ UNIRSE ============ -->
+<div id="setupJoin" class="screen" hidden>
+  <label>Tu nombre</label>
+  <input id="guestName" placeholder="Jugador"/>
+  <label>Código de la sala</label>
+  <input id="salaCode" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;font-size:1.2rem;letter-spacing:4px;text-align:center"/>
+  <div id="joinEstado" class="hint" style="margin:8px 0">.</div>
+  <button onclick="conectar()">🔗 Conectar</button>
+  <button class="warn" style="margin-top:8px" onclick="location.reload()">← Volver</button>
+</div>
+
+<!-- ============ JUEGO ============ -->
+<div id="game" hidden>
+  <div class="hint" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <button class="warn" style="width:auto;padding:4px 14px;font-size:.78rem" onclick="salirAlMenu()">🏠 Menú</button>
+    <span id="modoTxt"></span>
+    <button class="warn" style="width:auto;padding:4px 14px;font-size:.78rem" onclick="toggleCam()" title="Activar/desactivar cámara en primera persona">🎥</button>
+  </div>
+  <div id="scene"><div id="stage"><div id="board"></div></div></div>
+  <div id="panel">
+    <div class="box">
+      <div id="turnName" style="font-weight:700;margin-bottom:4px"></div>
+      <div id="dice"></div>
+      <button id="rollBtn" onclick="pedirTirar()">🎲 Tirar dados</button>
+      <div id="players" style="margin-top:8px"></div>
+      <div id="log"></div>
+    </div>
+    <div class="box" style="font-size:.8rem;opacity:.85">
+      <b>🛡️ Protecciones:</b><br>
+      😷 bloquea contagio · 🧴 bloquea robo<br>
+      💉 bloquea todo · 🧫 bloquea estado<br>
+      🌡️ repite tirada con virus<br><br>
+      <b>🦠 Virus:</b> sacrifica 1 protección y avanzas igual<br>
+      <b>🏥 Cuarentena:</b> checkpoint + refugio<br>
+      <b>⚡ Casillas grandes:</b> +25 / −30<br>
+      <b>🏁 Meta:</b> exacta o rebotas
+    </div>
+  </div>
+</div>
+
+<div id="modal" hidden></div>
+
+<script>
+/* ================= TABLERO ================= */
+const W=30, GAP=2, NPATH=8, CELL=22;
+const ROWCOLORS=['#ba68c8','#ffd54f','#4fc3f7','#81c784','#f06292','#ffb74d','#9575cd','#4db6ac'];
+function buildPath(){
+  const pts=[]; let y=0,x=0,dir=1;
+  for(let p=0;p<NPATH;p++){
+    const n=(p===0)?W:W-1;
+    for(let i=0;i<n;i++){ pts.push({x,y}); if(i<n-1)x+=dir; }
+    if(p<NPATH-1){ for(let k=0;k<GAP+1;k++){ y++; pts.push({x,y}); } dir=-dir; x+=dir; }
+  }
+  return pts;
+}
+const PATH=buildPath();
+const LAST=PATH.length-1, QSTEP=20;
+const BONOS_A=[10,15,20,25], BONOS_B=[12,18,22,25], MALUS=[-10,-15,-25,-30];
+function specialAt(i){
+  if(i<=0||i>=LAST)return null;
+  if(i%QSTEP===0)return{t:'q'};
+  const seg=Math.floor(i/QSTEP), rel=i%QSTEP, even=seg%2===0;
+  if(rel===4) return{t:'mv',v:BONOS_A[seg%BONOS_A.length]};
+  if(rel===12)return{t:'mv',v:BONOS_B[seg%BONOS_B.length]};
+  if(rel===14)return{t:'mv',v:MALUS[seg%MALUS.length]};
+  if(even){
+    if(rel===3||rel===7||rel===16)return{t:'prot'};
+    if(rel===5||rel===9||rel===18)return{t:'chance'};
+  }else{
+    if(rel===5||rel===9||rel===18)return{t:'prot'};
+    if(rel===3||rel===7||rel===16)return{t:'chance'};
+  }
+  return null;
+}
+const TOKS=['🔴','🟡','🔵','🟢','🟣','🟠'];
+const D1=['🦠','🦠','🦠','😷','😷','😷'];
+const D2=['🦠','🦠','🦠','🧴','🧴','🧴'];
+const isQ=i=>i>0&&i<LAST&&i%QSTEP===0;
+
+/* ================= ESTADO GLOBAL ================= */
+const S={players:[],turn:0,busy:false,extra:false,over:false,mode:'fiel'};
+let MODO='hot', HOST=false, MI_IDX=0, LOG=[];
+let peer=null, guests=[], PENDING={}, syncT=null, kickedSids=[];
+let MI_CODIGO=null, MI_NOMBRE=null, MI_SID=null, reconectando=false;
+const LSKEY='corona_sesion';
+const guardarSesion=()=>{try{localStorage.setItem(LSKEY,JSON.stringify({codigo:MI_CODIGO,nombre:MI_NOMBRE,sid:MI_SID}));}catch(e){}};
+const borrarSesion=()=>{try{localStorage.removeItem(LSKEY);}catch(e){}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ================= CÁMARA 3D ================= */
+let BOARDW=0,BOARDH=0;
+const CAM={fp:true,rx:55,rz:45,s:1,cx:0,cy:0,px:0,py:0};
+const cellPx=i=>({x:PATH[i].x*(CELL+GAP)+CELL/2,y:PATH[i].y*(CELL+GAP)+CELL/2});
+function applyCam(ms){
+ const st=document.getElementById('stage');if(!st)return;
+ st.style.transition=ms?('transform '+ms+'ms cubic-bezier(.45,.05,.2,1)'):'none';
+ st.style.transform=`translate(-50%,-50%) rotateX(${CAM.rx}deg) rotateZ(${CAM.rz}deg) scale(${CAM.s}) translate(${-CAM.px}px,${-CAM.py}px)`;
+}
+function fitIso(ms=800){
+ const scene=document.getElementById('scene');if(!scene||!BOARDW)return;
+ CAM.px=BOARDW/2;CAM.py=BOARDH/2;CAM.rx=55;CAM.rz=45;CAM.cx=0;CAM.cy=0;CAM.s=1;
+ applyCam(0);
+ const r=document.getElementById('stage').getBoundingClientRect();
+ const sr=scene.getBoundingClientRect();
+ CAM.s=Math.min((sr.width/r.width),(sr.height/r.height))*0.96;
+ CAM.s=Math.min(CAM.s,2.4);
+ applyCam(ms);
+}
+function camFocus(i,s=1.9,ms=700){
+ i=Math.max(0,Math.min(LAST,i));
+ const c=cellPx(i);
+ CAM.px=c.x;CAM.py=c.y;CAM.rx=55;CAM.cx=0;CAM.cy=44;CAM.s=s;
+ applyCam(ms);
+}
+const RZDIR={'1,0':-90,'-1,0':90,'0,1':180,'0,-1':0};
+function dirVec(i,d){
+ const a=PATH[Math.max(0,Math.min(LAST,i-d))],b=PATH[Math.max(0,Math.min(LAST,i))];
+ const dx=b.x-a.x,dy=b.y-a.y;
+ if(dx===0&&dy===0)return d>0?[0,1]:[0,-1];
+ return [dx,dy];
+}
+function camFP(i,dir,ms=600){
+ i=Math.max(0,Math.min(LAST,i));
+ const c=cellPx(i);
+ CAM.px=c.x;CAM.py=c.y;CAM.rx=70;CAM.s=3.0;CAM.cy=60;
+ CAM.rz=RZDIR[dir[0]+','+dir[1]]??CAM.rz;
+ applyCam(ms);
+}
+function toggleCam(){
+ CAM.fp=!CAM.fp;
+ if(!CAM.fp)fitIso();
+ alert(CAM.fp?'🎥 Cámara en primera persona ACTIVADA':'🗺️ Cámara isométrica fija (puedes reactivarla con 🎥)');
+}
+window.addEventListener('resize',()=>{if(!S.busy)fitIso();});
+
+/* ================= CARTAS ================= */
+const CHANCE=[
+ {n:'Dosis de refuerzo',e:'💊',t:'Avanza 8 casillas.',k:'good',act:'move',v:8,w:3},
+ {n:'Teletrabajo',e:'💻',t:'Avanza hasta la próxima cuarentena.',k:'good',act:'gotoQ',dir:'next',w:2},
+ {n:'Día de descanso',e:'🛌',t:'Tira de nuevo inmediatamente.',k:'good',act:'extra',w:2},
+ {n:'PCR negativo',e:'📄',t:'Inmunidad: el próximo castigo que te toque se anula.',k:'good',act:'immune',w:2},
+ {n:'Mercado surtido',e:'🛒',t:'Roba 1 carta de protección.',k:'good',act:'gainProt',w:3},
+ {n:'Energía extra',e:'⚡',t:'Tu próxima tirada usa 3 dados numéricos.',k:'good',act:'threeD',w:2},
+ {n:'Suerte de principiante',e:'🍀',t:'Elige: avanzar 5 casillas o robar una protección.',k:'good',act:'choice',w:2},
+ {n:'Chequeo médico',e:'🩺',t:'Cancela tus efectos de estado activos.',k:'good',act:'clearStates',w:2},
+ {n:'Tos seca',e:'😤',t:'Retrocede 5 casillas.',k:'bad',tag:'movimiento',act:'move',v:-5,w:3},
+ {n:'Fiebre alta',e:'🤒',t:'Retrocede hasta la cuarentena anterior.',k:'bad',tag:'movimiento',act:'gotoQ',dir:'prev',w:2},
+ {n:'Aislamiento preventivo',e:'🏠',t:'Pierdes 1 turno.',k:'bad',tag:'estado',act:'loseTurn',w:2},
+ {n:'Dio positivo',e:'🦠',t:'Ve a la cuarentena más cercana.',k:'bad',tag:'movimiento',act:'gotoQ',dir:'close',w:2},
+ {n:'Pérdida de olfato',e:'👃',t:'Durante 2 turnos tirarás 1 solo dado numérico.',k:'bad',tag:'estado',act:'oneDice',v:2,w:2},
+ {n:'Estornudo histórico',e:'🤧',t:'Todos los demás avanzan 3 casillas.',k:'bad',act:'othersMove',v:3,w:2},
+ {n:'Cita en el laboratorio',e:'🧪',t:'Retrocede 10 casillas.',k:'bad',tag:'movimiento',act:'move',v:-10,w:2},
+ {n:'Mala noticia',e:'📉',t:'Retrocede la mitad de lo que te falta para llegar.',k:'bad',tag:'movimiento',act:'half',w:2},
+ {n:'Cuarentena estricta',e:'🔒',t:'Pierdes 2 turnos.',k:'bad',tag:'estado',act:'loseTurn',v:2,w:1},
+ {n:'Contagio',e:'🤧',t:'Elige 1 compañero: pierde su próximo turno.',k:'evil',tag:'contagio',victims:1,act:'loseTurn',w:3},
+ {n:'Supercontagiador',e:'☣️',t:'Elige 2 compañeros: retroceden 5 casillas.',k:'evil',tag:'contagio',victims:2,act:'move',v:-5,w:2},
+ {n:'Brote en su casa',e:'🏚️',t:'Elige 1: retrocede hasta su última cuarentena.',k:'evil',tag:'contagio',victims:1,act:'toCP',w:2},
+ {n:'Toque de queda',e:'🚨',t:'Elige 1: va a la siguiente cuarentena.',k:'evil',tag:'contagio',victims:1,act:'gotoQ',dir:'next',w:2},
+ {n:'Mercado negro',e:'🕵️',t:'Roba 1 protección a quien quieras.',k:'evil',tag:'robo',victims:1,act:'steal',w:2},
+ {n:'Intercambio de aires',e:'🌀',t:'Cambia tu posición con la de un compañero.',k:'evil',tag:'movimiento',victims:1,act:'swap',w:2},
+ {n:'Cadena de favores',e:'⛓️',t:'Elige 1: tú avanzas 5 y él retrocede 5.',k:'evil',tag:'contagio',victims:1,act:'chain',v:5,w:2},
+ {n:'Falsa alarma',e:'📢',t:'Todos los demás retroceden 2 casillas.',k:'evil',tag:'movimiento',all:'others',act:'othersMove',v:-2,w:2},
+ {n:'Reunión familiar',e:'👨‍👩‍👧',t:'Todos los demás avanzan a su cuarentena más cercana.',k:'evil',all:'others',act:'gotoQ',dir:'close',w:1},
+ {n:'Nueva cepa',e:'🧬',t:'Todos vuelven a su última cuarentena.',k:'glob',all:'all',act:'toCP',w:2},
+ {n:'Apertura económica',e:'🏬',t:'Todos avanzan 3 casillas.',k:'glob',all:'all',act:'move',v:3,w:2},
+ {n:'Jornada de vacunación',e:'💉',t:'Cada jugador roba 1 protección.',k:'glob',all:'all',act:'gainProt',w:2},
+ {n:'Desabastecimiento',e:'🚫',t:'Todos descartan 1 protección al azar.',k:'glob',all:'all',act:'discard',w:2},
+ {n:'Ayuda humanitaria',e:'🕊️',t:'El último de la tabla avanza 10 casillas.',k:'glob',once:true,act:'lastBoost',v:10,w:2},
+ {n:'Vergüenza nacional',e:'🙈',t:'El primero y el último intercambian posiciones.',k:'glob',once:true,act:'swapFL',w:2},
+ {n:'El perseguido',e:'🎯',t:'El líder retrocede 10 casillas.',k:'glob',once:true,act:'leaderBack',v:10,w:2},
+];
+const PROTS=[
+ {n:'😷 Tapabocas',t:'Anula un castigo de CONTAGIO.',blocks:['contagio'],w:6},
+ {n:'🧴 Gel antibacterial',t:'Anula un castigo de ROBO.',blocks:['robo'],w:6},
+ {n:'💉 Vacuna',t:'Anula CUALQUIER castigo. La más valiosa.',blocks:['*'],w:3},
+ {n:'🧫 Kit de prueba',t:'Anula un castigo de ESTADO.',blocks:['estado'],w:3},
+ {n:'🌡️ Termómetro',t:'Con virus: repites la tirada.',blocks:[],active:'termo',w:3},
+];
+let CH=[],PR=[];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rebuild(){
+ CH=shuffle(CHANCE.flatMap(c=>Array(c.w).fill(c)));
+ PR=shuffle(PROTS.flatMap(c=>Array(c.w).fill(c)));
+}
+const drawChance=()=>{if(!CH.length)rebuild();return CH.pop();};
+const drawProt=()=>{if(!PR.length)rebuild();return PR.pop();};
+
+/* ================= TABLERO (dibujo) ================= */
+function buildBoard(){
+ const b=document.getElementById('board');b.innerHTML='';
+ b.style.gridTemplateColumns=`repeat(${W},${CELL}px)`;
+ b.style.gridAutoRows=CELL+'px';
+ BOARDW=W*(CELL+GAP)-GAP;
+ BOARDH=(PATH[PATH.length-1].y+1)*(CELL+GAP)-GAP;
+ const st=document.getElementById('stage');
+ st.style.width=BOARDW+'px';st.style.height=BOARDH+'px';
+ const map=new Map(PATH.map((pt,i)=>[pt.x+','+pt.y,i]));
+ for(let y=0;y<PATH[PATH.length-1].y+1;y++)for(let x=0;x<W;x++){
+  const i=map.get(x+','+y),d=document.createElement('div');
+  if(i==null){d.className='void';b.appendChild(d);continue;}
+  d.className='cell';d.id='c'+i;
+  d.style.background=(y%(GAP+1)===0)?ROWCOLORS[(y/(GAP+1))%ROWCOLORS.length]:'#8fa3b0';
+  const sp=specialAt(i);
+  if(i===0){d.classList.add('start');d.textContent='🚩';}
+  else if(i===LAST){d.classList.add('goal');d.textContent='🏁';}
+  else if(sp&&sp.t==='q'){d.classList.add('q');d.textContent='🏥';}
+  else if(sp&&sp.t==='prot'){d.classList.add('s');d.textContent='🛡️';}
+  else if(sp&&sp.t==='chance'){d.classList.add('c');d.textContent='❓';}
+  else if(sp&&sp.t==='mv'){
+   d.classList.add(sp.v>0?'b':'r');
+   d.textContent=(sp.v>0?'+':'')+sp.v+(Math.abs(sp.v)>=20?'⚡':'');
+  }
+  if(i%10===0&&i>0&&i<LAST)d.innerHTML+=`<span class="num">${i}</span>`;
+  b.appendChild(d);
+ }
+}
+const cellAt=i=>document.getElementById('c'+i);
+function renderTokens(){
+ if(!document.getElementById('c0'))return;
+ document.querySelectorAll('.tok').forEach(t=>t.remove());
+ S.players.forEach((p,k)=>{
+  if(p.kicked)return;
+  const t=document.createElement('div');t.className='tok';t.textContent=TOKS[k];
+  const off=S.players.filter((q,j)=>j<k&&!q.kicked&&q.pos===p.pos).length;
+  t.style.left=(2+off*8)+'px';
+  cellAt(p.pos).appendChild(t);
+ });
+}
+
+/* ================= UI ================= */
+function log(msg){
+ LOG.unshift(msg);
+ const d=document.createElement('div');d.textContent=msg;
+ const l=document.getElementById('log');l.prepend(d);
+ while(l.children.length>60)l.lastChild.remove();
+ syncSoon();
+}
+function renderPlayers(){
+ if(!S.players.length)return;
+ const p=S.players[S.turn];
+ document.getElementById('turnName').textContent=S.over?'Partida terminada':('Turno de: '+TOKS[S.turn]+' '+(p?p.name:''));
+ const el=document.getElementById('players');el.innerHTML='';
+ S.players.forEach((q,k)=>{
+  const d=document.createElement('div');
+  d.className='pl'+(k===S.turn?' active':'')+(k===MI_IDX?' me':'')+(q.kicked?' kicked':'');
+  const st=[];
+  if(q.skip)st.push('⏸️'+q.skip);if(q.oneDice)st.push('👃'+q.oneDice);
+  if(q.threeD)st.push('⚡');if(q.immune)st.push('📄');if(isQ(q.pos))st.push('🏥');
+  if(q.conn===null&&MODO==='net'&&k!==0&&!q.kicked)st.push('⚠️desconectado');
+  const estado=q.kicked?'🚫 expulsado':st.join(' ');
+  const chips=(q.hand||[]).length&&!q.kicked
+   ?`<div class="chips">${q.hand.map(c=>`<span class="chip" title="${c.t||''}">${c.n}</span>`).join('')}</div>`:'';
+  let kickBtn='';
+  if(MODO==='net'&&HOST&&k!==0&&!q.kicked)
+   kickBtn=`<button class="kick" onclick="expulsar(${k})">❌</button>`;
+  d.innerHTML=`${TOKS[k]} <b>${q.name}</b> · casilla ${q.pos} ${estado}${chips}${kickBtn}`;
+  el.appendChild(d);
+ });
+ updateRollBtn();
+}
+function updateRollBtn(){
+ const b=document.getElementById('rollBtn');if(!b)return;
+ if(MODO==='hot'){b.disabled=S.busy||S.over;b.textContent='🎲 Tirar dados';return;}
+ const p=S.players[S.turn];
+ const mio=S.turn===MI_IDX&&!S.over&&!(p&&p.kicked);
+ b.disabled=!mio;
+ if(mio)b.textContent='🎲 ¡Te toca! Tirar dados';
+ else if(p&&p.kicked)b.textContent='🚫 '+p.name+' fue expulsado';
+ else b.textContent='⏳ Esperando a '+(p?p.name:'...');
+}
+function renderLog(){const l=document.getElementById('log');l.innerHTML=LOG.slice(0,60).map(m=>`<div>${m}</div>`).join('');}
+function showDice(nums,figs){
+ const d=document.getElementById('dice');d.innerHTML='';
+ nums.forEach(n=>{const e=document.createElement('div');e.className='die';e.textContent=n;d.appendChild(e);});
+ figs.forEach(f=>{const e=document.createElement('div');e.className='die';e.style.fontSize='1.9rem';e.textContent=f;d.appendChild(e);});
+}
+function askLocal(title,html,opts){
+ return new Promise(res=>{
+  const m=document.getElementById('modal');m.hidden=false;
+  m.innerHTML=`<div class="mcard"><h3>${title}</h3><div>${html}</div><div class="btnv">${
+   opts.map((o,i)=>`<button data-i="${i}">${o}</button>`).join('')}</div></div>`;
+  m.querySelectorAll('button').forEach(b=>b.onclick=()=>{m.hidden=true;res(opts[+b.dataset.i]);});
+ });
+}
+function pickPlayerLocal(cands,title){
+ return new Promise(res=>{
+  const m=document.getElementById('modal');m.hidden=false;
+  m.innerHTML=`<div class="mcard"><h3>${title}</h3><div class="btnv">${
+   cands.map((q,i)=>{const k=S.players.indexOf(q);
+    return `<button data-i="${i}">${TOKS[k]} ${q.name} (casilla ${q.pos})</button>`;}).join('')}</div></div>`;
+  m.querySelectorAll('button').forEach(b=>b.onclick=()=>{m.hidden=true;res(cands[+b.dataset.i]);});
+ });
+}
+function pickCardLocal(p,title){
+ return new Promise(res=>{
+  const m=document.getElementById('modal');m.hidden=false;
+  m.innerHTML=`<div class="mcard"><h3>${title}</h3><div class="btnv">${
+   p.hand.map((c,i)=>`<button data-i="${i}">${c.n}</button>`).join('')
+  }<button data-i="-1" style="background:#78909c">No usar nada</button></div></div>`;
+  m.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+   m.hidden=true;const i=+b.dataset.i;res(i>=0?p.hand[i]:null);
+  });
+ });
+}
+function showCardLocal(c){
+ const col={good:'#2e7d32',bad:'#c62828',evil:'#6a1b9a',glob:'#00695c',prot:'#0277bd'}[c.k||'glob'];
+ return new Promise(res=>{
+  const m=document.getElementById('modal');m.hidden=false;
+  m.innerHTML=`<div class="mcard" style="border-top:10px solid ${col}"><div class="big">${c.e}</div><h3>${c.n}</h3><p>${c.t}</p><button id="ok">OK</button></div>`;
+  m.querySelector('#ok').onclick=()=>{m.hidden=true;res();};
+ });
+}
+
+/* ================= RED (PeerJS) ================= */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+async function loadLibs(){
+ if(window.Peer&&window.QRCode)return;
+ await Promise.all([
+  loadScript('https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'),
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js')
+ ]);
+}
+function nuevoCodigo(){const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=c[Math.random()*c.length|0];return s;}
+const esLocal=pi=>MODO==='hot'||pi===0;
+const idxOf=p=>S.players.indexOf(p);
+
+function estadoParaRed(){
+ return{
+  players:S.players.map(p=>({name:p.name,pos:p.pos,cp:p.cp,skip:p.skip,oneDice:p.oneDice,
+   threeD:p.threeD,immune:p.immune,kicked:!!p.kicked,
+   conn:p.conn?(p.conn.open?true:false):false,
+   hand:(p.hand||[]).map(c=>({n:c.n,t:c.t,e:c.e}))})),
+  turn:S.turn,over:S.over,dice:S.diceActual||{nums:[],figs:[]},log:LOG.slice(0,40)
+ };
+}
+function broadcastSync(){if(MODO!=='net'||!HOST)return;const m={t:'sync',s:estadoParaRed()};guests.forEach(g=>{try{if(g.conn&&g.conn.open)g.conn.send(m);}catch(e){}});}
+function syncSoon(){if(MODO!=='net'||!HOST)return;clearTimeout(syncT);syncT=setTimeout(broadcastSync,150);}
+
+function askRemote(pi,payload){
+ return new Promise(res=>{
+  const conn=S.players[pi].conn;
+  if(!conn||!conn.open){res(null);return;}
+  const rid=Math.random().toString(36).slice(2);
+  const f=v=>res(v);f.pi=pi;
+  PENDING[rid]=f;
+  conn.send({t:'pedir',rid,...payload});
+  setTimeout(()=>{if(PENDING[rid]){delete PENDING[rid];res(null);}},60000);
+ });
+}
+function limpiarPendingsDe(pi){
+ for(const rid in PENDING){const f=PENDING[rid];if(f&&f.pi===pi){delete PENDING[rid];try{f(null);}catch(e){}}}
+}
+async function askTo(pi,title,html,opts){
+ if(esLocal(pi))return askLocal(title,html,opts);
+ return askRemote(pi,{tipo:'opciones',titulo:title,html,opts});
+}
+async function pickPlayerTo(pi,cands,title){
+ if(esLocal(pi))return pickPlayerLocal(cands,title);
+ const lista=cands.map((q,i)=>({i:S.players.indexOf(q),txt:`${q.name} (casilla ${q.pos})`}));
+ const r=await askRemote(pi,{tipo:'victimas',titulo:title,lista});
+ if(r==null)return cands[0];
+ const idx=lista.findIndex(x=>x.i===r);
+ return cands[idx>=0?idx:0];
+}
+async function pickCardTo(pi,p,title){
+ if(esLocal(pi))return pickCardLocal(p,title);
+ const r=await askRemote(pi,{tipo:'cartas',titulo:title,cartas:p.hand.map(c=>c.n)});
+ if(r==null||r<0)return null;
+ return p.hand[r];
+}
+async function showCardTo(pi,c){
+ if(esLocal(pi))return showCardLocal(c);
+ const conn=S.players[pi].conn;
+ if(!conn||!conn.open)return;
+ const rid=Math.random().toString(36).slice(2);
+ const f=()=>{};f.pi=pi;
+ PENDING[rid]=f;
+ conn.send({t:'carta',rid,c});
+ setTimeout(()=>{if(PENDING[rid])delete PENDING[rid];},45000);
+}
+
+/* ================= EXPULSAR ================= */
+function expulsar(k){
+ const q=S.players[k];
+ if(!q||k===0||q.kicked)return;
+ if(!confirm('¿Expulsar a '+q.name+' de la partida?'))return;
+ try{if(q.conn&&q.conn.open){q.conn.send({t:'kick'});setTimeout(()=>{try{q.conn.close();}catch(e){}},400);}}catch(e){}
+ if(q.sid)kickedSids.push(q.sid);
+ q.kicked=true;q.conn=null;
+ limpiarPendingsDe(k);
+ log('🚫 '+q.name+' fue expulsado de la partida.');
+ renderPlayers();renderTokens();broadcastSync();
+}
+function expulsarLobby(i){
+ const g=guests[i];if(!g)return;
+ if(!confirm('¿Expulsar a '+g.nombre+' de la sala?'))return;
+ if(g.sid)kickedSids.push(g.sid);
+ try{if(g.conn&&g.conn.open){g.conn.send({t:'kick'});setTimeout(()=>{try{g.conn.close();}catch(e){}},400);}}catch(e){}
+ guests.splice(i,1);pintarLobby();
+}
+
+/* ================= HOST: sala ================= */
+async function crearSala(){
+ try{await loadLibs();}catch(e){alert('Sin internet no puedes crear una sala online.');return;}
+ const nombre=(document.getElementById('hostName').value.trim())||'Anfitrión';
+ const code=nuevoCodigo();
+ peer=new Peer('corona-'+code);
+ const codEl=document.getElementById('codigoSala');
+ codEl.textContent='CONECTANDO...';
+ peer.on('open',()=>{
+  codEl.textContent='corona-'+code;
+  const url=location.href.split('?')[0]+'?sala='+code;
+  const qr=document.getElementById('qrBox');qr.innerHTML='';
+  try{new QRCode(qr,{text:url,width:130,height:130});}catch(e){}
+ });
+ peer.on('error',e=>{
+  if(e.type==='unavailable-id'){try{peer.destroy();}catch(x){}crearSala();return;}
+ });
+ peer.on('connection',conn=>{
+  conn.on('data',d=>hostData(conn,d));
+  conn.on('close',()=>{
+   const g=guests.find(x=>x.conn===conn);
+   if(g){g.conn=null;log('⚠️ '+g.nombre+' se desconectó (lobby): asiento reservado.');pintarLobby();}
+   else if(conn._pidx!=null&&S.players[conn._pidx]&&!S.players[conn._pidx].kicked){
+    S.players[conn._pidx].conn=null;
+    log('⚠️ '+S.players[conn._pidx].name+' se desconectó (podrá reconectarse).');
+    renderPlayers();broadcastSync();
+   }
+  });
+ });
+ window._salaCode=code;window._hostName=nombre;
+ pintarLobby();
+}
+function pintarLobby(){
+ const l=document.getElementById('listaSala');
+ const filas=[`<div class="f"><span>👑 ${window._hostName||'Anfitrión'} (tú)</span></div>`]
+  .concat(guests.map((g,i)=>`<div class="f"><span>${g.nombre}${g.conn?'':' ⚠️ desconectado'}</span>
+   <button class="kick" onclick="expulsarLobby(${i})">❌</button></div>`));
+ l.innerHTML='<b>En la sala ('+(guests.length+1)+'):</b><br>'+filas.join('');
+ document.getElementById('btnEmpezar').disabled=guests.length<1;
+}
+function hostData(conn,d){
+ if(!d)return;
+ if(d.t==='join'){
+  conn._nombre=(d.nombre||'Invitado').slice(0,14);
+  conn._sid=d.sid||null;
+  guests.push({conn,nombre:conn._nombre,sid:d.sid});
+  conn.send({t:'lobbyok'});
+  log('🚪 '+conn._nombre+' entró a la sala.');
+  pintarLobby();return;
+ }
+ if(d.t==='rejoin'){
+  const sid=d.sid;
+  if(!sid||kickedSids.includes(sid)){try{conn.send({t:'kick'});setTimeout(()=>{try{conn.close();}catch(e){}},400);}catch(e){}return;}
+  const g=guests.find(x=>x.sid===sid);
+  if(g&&!S.players.length){
+   g.conn=conn;conn._nombre=g.nombre;conn._sid=sid;
+   conn.send({t:'lobbyok'});
+   pintarLobby();return;
+  }
+  const idx=S.players.findIndex(p=>p.sid===sid);
+  if(idx>0&&!S.players[idx].kicked){
+   S.players[idx].conn=conn;
+   conn._pidx=idx;conn._sid=sid;conn._nombre=S.players[idx].name;
+   conn.send({t:'inicio',tuIdx:idx,s:estadoParaRed(),mode:S.mode});
+   log('🔄 '+S.players[idx].name+' se reconectó.');
+   renderPlayers();renderTokens();broadcastSync();
+  }else{
+   try{conn.send({t:'kick'});setTimeout(()=>{try{conn.close();}catch(e){}},400);}catch(e){}
+  }
+  return;
+ }
+ if(d.t==='tirar'){
+  const k=conn._pidx;
+  if(k!=null&&S.turn===k&&!S.busy&&!S.over&&!S.players[k].kicked)takeTurn();
+  return;
+ }
+ if(d.t==='resp'&&PENDING[d.rid]){const f=PENDING[d.rid];delete PENDING[d.rid];f(d.valor);return;}
+ if(d.t==='ack'&&PENDING[d.rid]){delete PENDING[d.rid];}
+}
+function empezarRed(){
+ if(guests.length<1){alert('Nadie se ha unido todavía.');return;}
+ MODO='net';HOST=true;MI_IDX=0;
+ S.mode=document.getElementById('diceModeH').value;
+ S.players=[{name:window._hostName,pos:0,cp:0,skip:0,oneDice:0,threeD:0,immune:false,hand:[],conn:null,kicked:false,sid:'host'}];
+ guests.forEach((g,k)=>{
+  S.players.push({name:g.nombre,pos:0,cp:0,skip:0,oneDice:0,threeD:0,immune:false,hand:[],conn:g.conn,kicked:false,sid:g.sid});
+  if(g.conn)g.conn._pidx=k+1;
+ });
+ arrancarPartida();
+ guests.forEach((g,k)=>{try{if(g.conn&&g.conn.open)g.conn.send({t:'inicio',tuIdx:k+1,s:estadoParaRed(),mode:S.mode});}catch(e){}});
+}
+
+/* ================= GUEST ================= */
+async function conectar(){
+ try{await loadLibs();}catch(e){alert('Sin internet no puedes unirte. Revisa tu conexión.');return;}
+ const nombre=(document.getElementById('guestName').value.trim())||'Jugador';
+ const code=(document.getElementById('salaCode').value.trim().toUpperCase().replace(/^CORONA-?/,''));
+ if(!code){alert('Escribe el código de la sala.');return;}
+ const est=document.getElementById('joinEstado');est.textContent='Conectando...';
+ let sid;
+ try{
+  const ses=JSON.parse(localStorage.getItem(LSKEY)||'null');
+  sid=(ses&&ses.codigo===code&&ses.nombre===nombre)?ses.sid:null;
+ }catch(e){sid=null;}
+ if(!sid)sid=Math.random().toString(36).slice(2)+'-'+Date.now().toString(36);
+ MI_CODIGO=code;MI_NOMBRE=nombre;MI_SID=sid;
+ peer=new Peer();
+ peer.on('open',()=>{
+  const conn=peer.connect('corona-'+code,{reliable:true});
+  conn.on('open',()=>{conn.send({t:'join',nombre,sid});est.textContent='Conectado. Esperando al anfitrión...';});
+  conn.on('data',d=>guestData(conn,d));
+  conn.on('close',()=>{
+   est.textContent='⚠️ Conexión perdida.';
+   avisoReconexion('⚠️ Conexión perdida. Reconectando...');
+   setTimeout(reconectar,1000);
+  });
+  peer.on('error',e=>{
+   if(e.type==='peer-unavailable')est.textContent='❌ No existe esa sala. Revisa el código.';
+  });
+ });
+}
+function avisoReconexion(txt){const b=document.getElementById('recon');b.textContent=txt;b.hidden=false;}
+function ocultarAvisoRecon(){document.getElementById('recon').hidden=true;}
+async function reconectar(){
+ if(reconectando||!MI_CODIGO)return;
+ reconectando=true;
+ let ok=false;
+ for(let intento=1;intento<=12&&!ok;intento++){
+  avisoReconexion('🔄 Reconectando a la sala... (intento '+intento+'/12)');
+  try{
+   try{if(peer)peer.destroy();}catch(e){}
+   peer=new Peer();
+   await new Promise((res,rej)=>{peer.on('open',res);peer.on('error',rej);setTimeout(rej,8000);});
+   ok=await new Promise(res=>{
+    const conn=peer.connect('corona-'+MI_CODIGO,{reliable:true});
+    const to=setTimeout(()=>res(false),8000);
+    conn.on('open',()=>{
+     conn.send({t:'rejoin',sid:MI_SID,nombre:MI_NOMBRE});
+     window._miConn=conn;
+     conn.on('data',d=>guestData(conn,d));
+     conn.on('close',()=>{avisoReconexion('⚠️ Conexión perdida. Reconectando...');setTimeout(reconectar,1500);});
+     clearTimeout(to);res(true);
+    });
+    conn.on('error',()=>{clearTimeout(to);res(false);});
+   });
+  }catch(e){ok=false;}
+  if(!ok)await sleep(2500);
+ }
+ reconectando=false;
+ if(ok){avisoReconexion('✅ Reconectado');setTimeout(ocultarAvisoRecon,1500);}
+ else avisoReconexion('❌ No se pudo reconectar. Usa 🏠 Menú y entra de nuevo con el código '+MI_CODIGO);
+}
+document.addEventListener('visibilitychange',()=>{
+ if(document.visibilityState==='visible'&&MODO==='net'&&!HOST&&MI_CODIGO){
+  const c=window._miConn;
+  if(!c||!c.open)setTimeout(reconectar,400);
+ }
+});
+window.addEventListener('pageshow',ev=>{
+ if(ev.persisted&&MODO==='net'&&!HOST&&MI_CODIGO){
+  const c=window._miConn;
+  if(!c||!c.open)setTimeout(reconectar,400);
+ }
+});
+function guestData(conn,d){
+ if(!d)return;
+ window._miConn=conn;
+ if(d.t==='lobbyok'){
+  guardarSesion();
+  const est=document.getElementById('joinEstado');
+  if(est)est.textContent='✅ Dentro de la sala. Esperando...';
+  ocultarAvisoRecon();
+  return;
+ }
+ if(d.t==='inicio'){
+  MODO='net';HOST=false;MI_IDX=d.tuIdx;S.mode=d.mode||'fiel';
+  aplicarSync(d.s,true);
+  guardarSesion();ocultarAvisoRecon();
+  document.getElementById('setupJoin').hidden=true;
+  document.getElementById('setupHost').hidden=true;
+  document.getElementById('game').hidden=false;
+  document.getElementById('modoTxt').textContent='Online · eres '+TOKS[MI_IDX]+' '+S.players[MI_IDX].name;
+  buildBoard();renderTokens();renderPlayers();renderLog();showDice(d.s.dice.nums,d.s.dice.figs);
+  fitIso(0);
+  return;
+ }
+ if(d.t==='sync'){aplicarSync(d.s,false);renderTokens();renderPlayers();renderLog();showDice(d.s.dice.nums,d.s.dice.figs);return;}
+ if(d.t==='carta'){showCardLocal(d.c).then(()=>{try{conn.send({t:'ack',rid:d.rid});}catch(e){}});return;}
+ if(d.t==='pedir'){mostrarPeticion(conn,d);return;}
+ if(d.t==='kick'){
+  MI_CODIGO=null;borrarSesion();
+  const m=document.getElementById('modal');m.hidden=false;
+  m.innerHTML=`<div class="mcard"><div class="big">🚫</div><h3>Fuiste expulsado</h3>
+  <p>El anfitrión te sacó de la sala.</p><button onclick="location.reload()">Volver al menú</button></div>`;
+  return;
+ }
+ if(d.t==='fin'){
+  S.over=true;borrarSesion();
+  const m=document.getElementById('modal');m.hidden=false;
+  m.innerHTML=`<div class="mcard"><div class="big">🏆</div><h3>¡${d.nombre} llegó primero!</h3>
+  <p>Se salvó del coronavirus 🎉</p><button onclick="location.reload()">Salir</button></div>`;
+  return;
+ }
+}
+function aplicarSync(s,inicial){
+ const antes=S.players.length?s.players.map((p,i)=>(S.players[i]?S.players[i].pos:p.pos)):(s.players.map(p=>p.pos));
+ const turnoAntes=S.turn;
+ S.players=s.players.map(p=>({...p,conn:p.conn?{}:null}));
+ S.turn=s.turn;S.over=s.over;LOG=s.log||[];
+ if(inicial)return;
+ /* animar cambios de posición vistos desde el cliente */
+ S.players.forEach((p,k)=>{
+  const a=antes[k];
+  if(a!=null&&p.pos!==a&&!S.busy){
+   animateView(k,p.pos-a);
+  }
+ });
+ if(S.turn!==turnoAntes&&!S.over&&S.players[S.turn]){
+  const q=S.players[S.turn];
+  camFocus(q.pos,CAM.fp?1.9:1.9);
+ }
+}
+/* reproducción visual del movimiento en clientes */
+async function animateView(k,delta){
+ if(!delta)return;
+ const p=S.players[k];
+ const target=Math.max(0,Math.min(LAST,p.pos));
+ let cur=Math.max(0,Math.min(LAST,p.pos-delta));
+ const d=delta>0?1:-1;
+ const fp=CAM.fp&&k===MI_IDX&&Math.abs(delta)>=2;
+ if(fp)camFP(cur,dirVec(cur,d),500);else camFocus(cur,2.1,500);
+ await sleep(380);
+ while(cur!==target){
+  cur+=Math.sign(target-cur);
+  p.pos=cur;renderTokens();
+  if(fp)camFP(cur,dirVec(cur,d),140);else camFocus(cur,2.1,140);
+  await sleep(130);
+ }
+ if(fp)camFocus(target,1.8,600);
+}
+function mostrarPeticion(conn,d){
+ if(d.tipo==='opciones'){
+  askLocal(d.titulo,d.html||'',d.opts).then(r=>{try{conn.send({t:'resp',rid:d.rid,valor:r});}catch(e){}});
+ }else if(d.tipo==='cartas'){
+  askLocal(d.titulo,'Elige una carta:',[...d.cartas,'No usar nada']).then(r=>{
+   const i=d.cartas.indexOf(r);try{conn.send({t:'resp',rid:d.rid,valor:i>=0?i:-1});}catch(e){}
+  });
+ }else if(d.tipo==='victimas'){
+  askLocal(d.titulo,'Elige víctima:',d.lista.map(x=>x.txt)).then(r=>{
+   const i=d.lista.findIndex(x=>x.txt===r);
+   try{conn.send({t:'resp',rid:d.rid,valor:i>=0?d.lista[i].i:null});}catch(e){}
+  });
+ }
+}
+function pedirTirar(){
+ if(MODO==='hot'){takeTurn();return;}
+ if(HOST){if(S.turn===0&&!S.busy&&!S.over)takeTurn();return;}
+ if(window._miConn&&window._miConn.open)window._miConn.send({t:'tirar'});
+}
+function salirAlMenu(){
+ if(!confirm('¿Salir al menú principal? Se abandonará la partida actual.'))return;
+ try{if(MODO==='net'&&!HOST&&window._miConn)window._miConn.close();}catch(e){}
+ try{if(peer)peer.destroy();}catch(e){}
+ location.reload();
+}
+
+/* ================= MOVIMIENTO (con cámara) ================= */
+function updateCP(p){if(isQ(p.pos)&&p.pos>p.cp)p.cp=p.pos;}
+async function animateMove(p,delta){
+ if(!delta)return;
+ const esProta=(S.players[S.turn]===p);
+ const usarFP=CAM.fp&&esProta;
+ let dir=Math.sign(delta);
+ /* entrada de cámara */
+ if(usarFP)camFP(p.pos,dirVec(p.pos,dir),600);
+ else camFocus(p.pos,2.2,600);
+ await sleep(usarFP?650:450);
+ for(let s=0;s<Math.abs(delta);s++){
+  let np=p.pos+dir;
+  if(np>LAST)np=LAST-(np-LAST),dir=-1;
+  if(np<0)np=-np,dir=1;
+  const dv=dirVec(np,Math.sign(np-p.pos)||dir);
+  const prevCell=cellAt(p.pos);
+  p.pos=np;
+  const gl=cellAt(np);if(gl)gl.classList.add('glow');
+  renderTokens();
+  if(usarFP)camFP(np,dv,140);else camFocus(np,2.2,140);
+  await sleep(120);
+  if(gl)setTimeout(()=>gl.classList.remove('glow'),160);
+ }
+ updateCP(p);renderPlayers();
+ if(usarFP)camFocus(p.pos,1.8,700);
+}
+const qList=()=>{const a=[];for(let i=QSTEP;i<LAST;i+=QSTEP)a.push(i);return a;};
+async function gotoQ(p,dir){
+ const qs=qList();let dest;
+ if(dir==='close')dest=qs.reduce((b,q)=>Math.abs(q-p.pos)<Math.abs(b-p.pos)?q:b);
+ else if(dir==='next'){dest=qs.find(q=>q>p.pos);if(dest==null){log('🌫️ No hay cuarentena delante.');return;}}
+ else{const b=qs.filter(q=>q<p.pos);dest=b.length?b[b.length-1]:0;}
+ await animateMove(p,dest-p.pos);
+}
+
+/* ================= EFECTOS ================= */
+const others=me=>S.players.filter(q=>q!==me&&!q.kicked);
+async function giveProt(p){
+ const c=drawProt();
+ await showCardTo(idxOf(p),{...c,k:'prot'});
+ p.hand.push(c);
+ log(`🎁 ${p.name} obtiene ${c.n}.`);renderPlayers();syncSoon();
+}
+async function stealProt(a,v){
+ if(!v.hand.length){log(`😑 ${v.name} no tiene cartas.`);return;}
+ const c=v.hand.splice((Math.random()*v.hand.length)|0,1)[0];
+ a.hand.push(c);log(`🕵️ ${a.name} robó ${c.n} a ${v.name}.`);renderPlayers();syncSoon();
+}
+async function runFx(c,target,act){
+ switch(c.act){
+  case 'move':await animateMove(target,c.v);break;
+  case 'loseTurn':target.skip+=(c.v||1);log(`⏸️ ${target.name} perderá ${c.v||1} turno(s).`);break;
+  case 'oneDice':target.oneDice=c.v;log(`👃 ${target.name}: 1 solo dado por ${c.v} turnos.`);break;
+  case 'threeD':target.threeD=1;log(`⚡ ${target.name}: próxima tirada con 3 dados.`);break;
+  case 'clearStates':target.oneDice=0;target.skip=0;log(`🩺 ${target.name} está renovado.`);break;
+  case 'immune':target.immune=true;log(`📄 ${target.name} tiene inmunidad.`);break;
+  case 'gainProt':await giveProt(target);break;
+  case 'extra':S.extra=true;log('🎲 ¡Tira de nuevo!');break;
+  case 'gotoQ':await gotoQ(target,c.dir);break;
+  case 'toCP':await animateMove(target,target.cp-target.pos);break;
+  case 'half':await animateMove(target,-Math.ceil((LAST-target.pos)/2));break;
+  case 'choice':{
+   const r=await askTo(idxOf(target),'🍀 Suerte de principiante','¿Qué prefieres?',['Avanzar 5 casillas','Robar protección']);
+   if(r==='Robar protección')await giveProt(target);else await animateMove(target,5);break;}
+  case 'chain':await animateMove(act,c.v);await animateMove(target,-c.v);break;
+  case 'steal':await stealProt(act,target);break;
+  case 'swap':{const t=act.pos;act.pos=target.pos;target.pos=t;updateCP(act);updateCP(target);
+   renderTokens();log(`🌀 ${act.name} y ${target.name} intercambiaron posiciones.`);break;}
+  case 'othersMove':await animateMove(target,c.v);break;
+  case 'discard':{const x=target.hand.splice((Math.random()*target.hand.length)|0,1)[0];
+   if(x)log(`🗑️ ${target.name} descarta ${x.n}.`);break;}
+  case 'lastBoost':{const ord=S.players.filter(p=>!p.kicked).sort((a,b)=>a.pos-b.pos);if(ord.length)await animateMove(ord[0],c.v);break;}
+  case 'swapFL':{const ord=S.players.filter(p=>!p.kicked).sort((a,b)=>b.pos-a.pos);if(!ord.length)break;
+   const f=ord[0],l=ord[ord.length-1];if(f===l)break;
+   const t=f.pos;f.pos=l.pos;l.pos=t;updateCP(f);updateCP(l);renderTokens();
+   log(`🙈 ${f.name} y ${l.name} (primero y último) se intercambiaron.`);break;}
+  case 'leaderBack':{const cand=S.players.filter(p=>!p.kicked);
+   if(!cand.length)break;
+   const ld=cand.reduce((a,b)=>b.pos>a.pos?b:a);await animateMove(ld,-c.v);break;}
+ }
+ renderPlayers();syncSoon();
+}
+async function castigoOn(target,c,act){
+ if(c.tag){
+  if(target.immune){target.immune=false;log(`📄 PCR negativo: ${target.name} anula "${c.n}".`);return;}
+  const pr=target.hand.find(x=>x.blocks&&(x.blocks.includes('*')||x.blocks.includes(c.tag)));
+  if(pr){
+   const r=await askTo(idxOf(target),'🛡️ Usar protección',`${target.name}, ¿usar <b>${pr.n}</b> para anular "<b>${c.n}</b>"?`,['Sí, usarla','No']);
+   if(r==='Sí, usarla'){target.hand.splice(target.hand.indexOf(pr),1);
+    log(`🛡️ ${target.name} anuló "${c.n}" con ${pr.n}.`);renderPlayers();syncSoon();return;}
+  }
+ }
+ await runFx(c,target,act);
+}
+async function resolveChance(p){
+ const pi=idxOf(p);
+ const c=drawChance();
+ await showCardTo(pi,c);
+ log(`🃏 ${p.name} sacó "${c.n}".`);
+ if(c.all==='all'){
+  if(c.once){await runFx(c,p,p);}
+  else{for(const q of [...S.players]){if(q.kicked)continue;c.act==='gainProt'?await giveProt(q):await runFx(c,q,q);}}
+ }else if(c.all==='others'){
+  for(const q of others(p))await runFx(c,q,p);
+ }else if(c.victims){
+  const cands=others(p).filter(q=>!isQ(q.pos)&&(MODO!=='net'||q.conn!==null||idxOf(q)===0));
+  if(!cands.length){log('🌫️ Nadie es elegible: todos están a salvo.');return;}
+  const chosen=[];
+  for(let k=0;k<c.victims&&chosen.length<cands.length;k++){
+   const rest=cands.filter(q=>!chosen.includes(q));
+   const v=await pickPlayerTo(pi,rest,`🎯 Elige víctima (${k+1}/${Math.min(c.victims,cands.length)}) — ${c.n}`);
+   if(v)chosen.push(v);
+  }
+  for(const v of chosen)await castigoOn(v,c,p);
+ }else{
+  await castigoOn(p,c,p);
+ }
+ renderPlayers();renderTokens();syncSoon();
+}
+
+/* ================= TURNOS ================= */
+async function takeTurn(){
+ if(S.busy||S.over)return;
+ S.busy=true;updateRollBtn();
+ const p=S.players[S.turn];
+ if(p.kicked){log(`🚫 ${p.name} fue expulsado: no juega.`);S.busy=false;return endTurn();}
+ if(MODO==='net'&&S.turn!==0&&p.conn===null){
+  log(`💤 ${p.name} está desconectado: pasa turno (su asiento queda reservado).`);
+  await sleep(500);S.busy=false;return endTurn();
+ }
+ if(p.skip>0){
+  p.skip--;log(`⏸️ ${p.name} pierde el turno.`);renderPlayers();syncSoon();
+  await sleep(600);S.busy=false;return endTurn();
+ }
+ /* zoom de presentación al jugador activo */
+ camFocus(p.pos,1.9,700);
+ await sleep(500);
+ const nd=p.threeD>0?3:(p.oneDice>0?1:2);
+ if(p.threeD>0)p.threeD--;
+ if(p.oneDice>0)p.oneDice--;
+ let nums,figs;
+ while(true){
+  nums=Array.from({length:nd},()=>1+(Math.random()*6|0));
+  figs=[D1[Math.random()*6|0],D2[Math.random()*6|0]];
+  showDice(nums,figs);S.diceActual={nums:[...nums],figs:[...figs]};syncSoon();
+  await sleep(700);
+  const vir=figs.filter(f=>f==='🦠').length;
+  const pierde=(S.mode==='fiel'&&vir>=1)||(S.mode==='suave'&&vir>=2);
+  if(!pierde)break;
+  const termo=p.hand.find(x=>x.active==='termo');
+  const opts=[],acts=[];
+  if(p.hand.length){opts.push('🛡️ Sacrificar una carta de protección');acts.push('prot');}
+  if(termo){opts.push('🌡️ Termómetro: repetir la tirada');acts.push('termo');}
+  opts.push('😵 Perder el turno');acts.push('perder');
+  const r=await askTo(S.turn,'🦠 ¡Salió virus!',`<b>${p.name}</b>, ¿cómo te defiendes?`,opts);
+  const a=acts[opts.indexOf(r)];
+  if(a==='prot'){
+   const c=await pickCardTo(S.turn,p,'¿Qué carta sacrificas?');
+   if(c){
+    p.hand.splice(p.hand.indexOf(c),1);renderPlayers();syncSoon();
+    log(`🛡️ ${p.name} sacrificó ${c.n} y neutralizó el virus 🦠. Avanza ${nums.reduce((x,y)=>x+y,0)}.`);
+    break;
+   }
+   log(`🦠 ${p.name} sacó virus y pierde el turno.`);
+   S.busy=false;return endTurn();
+  }
+  if(a==='termo'){
+   p.hand.splice(p.hand.indexOf(termo),1);renderPlayers();syncSoon();
+   log(`🌡️ ${p.name} usa el termómetro y repite la tirada.`);
+   continue;
+  }
+  log(`🦠 ${p.name} sacó virus y pierde el turno.`);
+  S.busy=false;return endTurn();
+ }
+ let steps=nums.reduce((a,b)=>a+b,0);
+ if(S.mode==='mate')steps=Math.max(1,steps-2*figs.filter(f=>f==='🦠').length);
+ log(`🎲 ${p.name}: ${nums.join('+')}${figs.join('')} → avanza ${steps}.`);
+ await animateMove(p,steps);
+ const i=p.pos;
+ if(i===LAST)return win(p);
+ const sp=specialAt(i);
+ if(sp&&sp.t==='q'){log(`🏥 ${p.name} cae en cuarentena: punto seguro registrado.`);}
+ else if(sp&&sp.t==='prot'){log(`🛡️ ${p.name} saca tarjeta de protección.`);await giveProt(p);}
+ else if(sp&&sp.t==='chance'){log(`❓ ${p.name} saca una tarjeta...`);await resolveChance(p);}
+ else if(sp&&sp.t==='mv'){
+  log(`${sp.v>0?'⏩':'⏪'} ${p.name}: casilla ${sp.v>0?'+':''}${sp.v}.`);
+  await animateMove(p,sp.v);
+  if(p.pos===LAST)return win(p);
+  if(isQ(p.pos))log(`🏥 ${p.name} aterrizó en cuarentena: checkpoint.`);
+ }
+ if(S.over)return;
+ S.busy=false;endTurn();
+}
+function endTurn(){
+ if(MODO==='net'&&!HOST)return;
+ S.busy=false;updateRollBtn();
+ if(S.extra){S.extra=false;log(`🔁 ${S.players[S.turn].name} tiene otro turno.`);}
+ else S.turn=(S.turn+1)%S.players.length;
+ fitIso(800);
+ if(!S.over)camFocus(S.players[S.turn].pos,1.6,900);
+ renderPlayers();syncSoon();
+}
+function win(p){
+ S.over=true;S.busy=true;
+ log(`🏆 ¡${p.name} ganó!`);
+ fitIso(900);
+ const m=document.getElementById('modal');m.hidden=false;
+ m.innerHTML=`<div class="mcard"><div class="big">🏆</div><h3>¡${p.name} llegó primero!</h3>
+ <p>Se salvó del coronavirus 🎉</p><button onclick="location.reload()">Jugar de nuevo</button></div>`;
+ if(HOST){guests.forEach(g=>{try{if(g.conn&&g.conn.open)g.conn.send({t:'fin',nombre:p.name});}catch(e){}});}
+}
+
+/* ================= PANTALLAS ================= */
+function ocultarTodo(){['setup','setupHot','setupHost','setupJoin'].forEach(id=>document.getElementById(id).hidden=true);}
+function volver(){ocultarTodo();document.getElementById('setup').hidden=false;}
+function verHotSeat(){ocultarTodo();document.getElementById('setupHot').hidden=false;mkNames();}
+function verCrear(){ocultarTodo();document.getElementById('setupHost').hidden=false;crearSala();}
+function verUnir(){
+ ocultarTodo();document.getElementById('setupJoin').hidden=false;
+ const s=new URLSearchParams(location.search).get('sala');
+ if(s)document.getElementById('salaCode').value=s.toUpperCase();
+}
+async function reconectarGuardada(){
+ let ses=null;
+ try{ses=JSON.parse(localStorage.getItem(LSKEY)||'null');}catch(e){}
+ if(!ses)return;
+ ocultarTodo();document.getElementById('setupJoin').hidden=false;
+ document.getElementById('salaCode').value=ses.codigo;
+ document.getElementById('guestName').value=ses.nombre;
+ await conectar();
+}
+function mkNames(){
+ const n=+document.getElementById('nPlayers').value,c=document.getElementById('names');
+ c.innerHTML='';
+ for(let i=0;i<n;i++){const inp=document.createElement('input');inp.placeholder='Nombre jugador '+(i+1);c.appendChild(inp);}
+}
+function startHot(){
+ MODO='hot';HOST=false;
+ const n=+document.getElementById('nPlayers').value;
+ const names=[...document.querySelectorAll('#names input')].map(i=>i.value.trim()||('Jugador '+(i+1)));
+ S.players=names.map(nm=>({name:nm,pos:0,cp:0,skip:0,oneDice:0,threeD:0,immune:false,hand:[],conn:null,kicked:false}));
+ S.mode=document.getElementById('diceMode').value;
+ arrancarPartida();
+}
+function arrancarPartida(){
+ rebuild();S.turn=0;S.over=false;S.extra=false;S.busy=false;
+ LOG=[];
+ buildBoard();
+ ocultarTodo();
+ document.getElementById('game').hidden=false;
+ document.getElementById('modoTxt').textContent=MODO==='hot'?'Hot-seat: pasa el teléfono':'Online · anfitrión';
+ renderTokens();renderPlayers();
+ log('🦠 ¡Comienza la partida! Suerte... la van a necesitar.');
+ showDice([],[]);renderLog();updateRollBtn();
+ fitIso(0);
+}
+window.addEventListener('load',()=>{
+ const s=new URLSearchParams(location.search).get('sala');
+ if(s){verUnir();return;}
+ let ses=null;
+ try{ses=JSON.parse(localStorage.getItem(LSKEY)||'null');}catch(e){}
+ if(ses&&ses.codigo){
+  const b=document.getElementById('btnReconectar');
+  b.hidden=false;
+  b.textContent='🔄 Volver a la sala corona-'+ses.codigo+' ('+ses.nombre+')';
+ }
+});
+</script>
+</body>
+</html>
